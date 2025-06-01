@@ -1,65 +1,77 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-require('dotenv').config();
+const morgan = require('morgan');
 
 const app = express();
+const PORT = process.env.PORT || 5000;
 
-// Security middleware
-app.use(helmet());
-app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-    credentials: true
+// セキュリティミドルウェア
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
-// Rate limiting
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100
-});
-app.use(limiter);
+// CORS設定
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true
+}));
 
-// Body parsing middleware
+// ログ設定
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('dev'));
+}
+
+// 基本ミドルウェア
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Health check
+// ヘルスチェック
 app.get('/api/health', (req, res) => {
-    res.json({
-        status: 'OK',
-        message: '大学生SNS バックエンドAPI が正常動作中',
-        timestamp: new Date().toISOString(),
-        port: process.env.PORT || 8000
-    });
+  res.status(200).json({
+    status: 'OK',
+    message: 'University SNS Backend is running',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
 });
 
-// 404 handler
+// 基本ルート
+app.get('/', (req, res) => {
+  res.json({
+    message: 'University SNS Backend API',
+    version: '1.0.0',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth/*'
+    }
+  });
+});
+
+// 404ハンドラー
 app.use('*', (req, res) => {
-    res.status(404).json({
-        success: false,
-        message: 'API endpoint not found'
-    });
+  res.status(404).json({
+    error: 'Route not found',
+    path: req.originalUrl
+  });
 });
 
-// Error handling middleware
-//s
+// エラーハンドラー
 app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? err.message : {}
-    });
+  console.error('Error:', err);
+  res.status(err.status || 500).json({
+    error: err.message || 'Internal server error',
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  });
 });
 
-const PORT = process.env.PORT || 8000;
-
+// サーバー起動
 app.listen(PORT, () => {
-    console.log(`🚀 Backend API Server is running on port ${PORT}`);
-    console.log(`🌐 Environment: ${process.env.NODE_ENV}`);
-    console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-    console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL}`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`📖 API docs: http://localhost:${PORT}/`);
 });
 
 module.exports = app;
