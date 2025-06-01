@@ -1,0 +1,26 @@
+# 依存関係（自動生成されるファイル）
+node_modules/
+package-lock.json
+
+# 環境設定（機密情報）
+.env
+.env.local
+.env.production
+
+# ログファイル
+*.log
+npm-debug.log*
+
+# OS固有ファイル
+.DS_Store
+Thumbs.db
+
+ 
+
+# エディタ設定
+.vscode/
+.idea/
+
+# 一時ファイル
+*.tmp
+*.temp
