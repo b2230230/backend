@@ -4,6 +4,10 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 
+// ルーターとデータベースのインポート
+const authRoutes = require('./src/routes/auth');
+const { initializeDatabase } = require('./src/database/connection');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -37,6 +41,9 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// API ルート
+app.use('/api/auth', authRoutes);
+
 // 基本ルート
 app.get('/', (req, res) => {
   res.json({
@@ -44,7 +51,12 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     endpoints: {
       health: '/api/health',
-      auth: '/api/auth/*'
+      auth: {
+        register: 'POST /api/auth/register',
+        login: 'POST /api/auth/login',
+        profile: 'GET /api/auth/profile',
+        logout: 'POST /api/auth/logout'
+      }
     }
   });
 });
@@ -67,11 +79,24 @@ app.use((err, req, res, next) => {
 });
 
 // サーバー起動
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`📖 API docs: http://localhost:${PORT}/`);
-});
+const startServer = async () => {
+  try {
+    // データベース初期化
+    await initializeDatabase();
+    
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
+      console.log(`📖 API docs: http://localhost:${PORT}/`);
+      console.log(`🔐 Auth endpoints: http://localhost:${PORT}/api/auth/`);
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+startServer();
 
 module.exports = app;
